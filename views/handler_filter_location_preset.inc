@@ -14,10 +14,16 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
   const FILTER_DISABLED = 'none';
 
   /**
-   * String to mark custom set  filter values.
+   * String to mark custom set filter values.
    * @var string
    */
   const FILTER_CUSTOM = 'custom';
+
+  /**
+   * String to mark current set filter values.
+   * @var string
+   */
+  const FILTER_CURRENT = 'current';
 
   /**
    * This filter is always exposed.
@@ -44,6 +50,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     // Define exposed options.
     $options['expose']['contains'] += array(
       'allow_custom_values' => array('default' => TRUE),
+      'add_current_position_preset' => array('default' => TRUE),
       'geocoder' => array(
         'contains' => array(
           'show' => array('default' => FALSE),
@@ -158,6 +165,9 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     $preset = $this->getCurrentPreset($input);
     $preset_index = key($preset);
     $preset_location = reset($preset);
+    if (!$preset_location) {
+      $preset_location = array();
+    }
 
     if (!empty($this->options['expose']['locations'])) {
       $presets[self::FILTER_DISABLED] = t('None');
@@ -217,7 +227,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       '#type' => 'hidden',
       '#default_value' => $this->options['expose']['radius']['settings']['radius'],
     );
-    if ($preset_index !== self::FILTER_DISABLED && !empty($this->options['expose']['radius']['show']) && $preset_location['radius_min'] != $preset_location['radius_max']) {
+    if ($preset_index !== self::FILTER_DISABLED && !empty($this->options['expose']['radius']['show']) && !empty($preset_location['radius']) && $preset_location['radius_min'] != $preset_location['radius_max']) {
       $radius_units = search_api_location_preset_radius_options();
       $form['value']['radius'] = array(
         '#type' => 'textfield',
@@ -261,7 +271,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
           0 => array(
             'data' => array(
               'searchApiLocationPreset' => array(
-                $html_id => $preset_location,
+                $html_id => $preset_location + array('add_current_position' => !empty($this->options['expose']['add_current_position_preset']), 'preset' => $preset_index),
               ),
             ),
             'type' => 'setting',
@@ -304,7 +314,11 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
 
     // Check if custom coordinates are accepted and if so create the custom
     // preset.
-    if (!empty($this->options['expose']['allow_custom_values']) && ($preset_index === self::FILTER_CUSTOM) && !empty($input)) {
+    $custom_value_presets = array(
+      self::FILTER_CUSTOM => self::FILTER_CUSTOM,
+      self::FILTER_CURRENT => self::FILTER_CURRENT,
+    );
+    if (!empty($this->options['expose']['allow_custom_values']) && (isset($custom_value_presets[$preset_index])) && !empty($input)) {
       $location = array();
       if ($preset) {
         $location = $preset['location'];
@@ -325,7 +339,12 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
         'radius_step' => $this->options['expose']['radius']['settings']['step'],
       );
 
-      $preset_index = self::FILTER_CUSTOM;
+      if ($preset_index == self::FILTER_CURRENT) {
+        $preset_index = self::FILTER_CURRENT;
+      }
+      else {
+        $preset_index = self::FILTER_CUSTOM;
+      }
       $preset = $location;
     }
     elseif ($preset_index !== self::FILTER_DISABLED) {
@@ -390,6 +409,17 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       '#title' => t('Allow custom values'),
       '#description' => t('If enabled you can configure which values can be changed by the users'),
       '#default_value' => !empty($this->options['expose']['allow_custom_values']),
+    );
+    $form['expose']['add_current_position_preset'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Provide a preset for the current position'),
+      '#description' => t('If enabled and the browser supports it a preset for the current position is show.'),
+      '#default_value' => !empty($this->options['expose']['add_current_position_preset']),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="options[expose][allow_custom_values]"]' => array('checked' => TRUE),
+        ),
+      ),
     );
     $form['expose']['geocoder']['show'] = array(
       '#type' => 'checkbox',
@@ -712,7 +742,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       $preset = $this->getCurrentPreset($this->view->exposed_input[$field]);
       $preset_location = reset($preset);
     }
-    if ($preset_location) {
+    if ($preset_location && isset($preset_location['lat']) && isset($preset_location['lat'])) {
       $location_options[] = array(
         'field' => $this->real_field,
         'lat' => $preset_location['lat'],

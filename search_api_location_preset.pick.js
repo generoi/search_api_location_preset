@@ -110,6 +110,42 @@
       Drupal.searchApiLocationPreset.maps[i].fitBounds(Drupal.searchApiLocationPreset.circles[i].getBounds());
 
       return false; // if called from <a>-Tag
+    },
+
+    setCurrentCoordinates: function (i) {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          // Update the lat and long input fields.
+          $('#'  + i + '-lat').val(position.coords.latitude);
+          $('#'  + i + '-long').val(position.coords.longitude);
+          // Allow other scripts to react when the current position was set.
+          $('#'  + i + '-preset').trigger('currentPositionSet', [ position ] );
+        }, function(error) {
+          Drupal.searchApiLocationPreset.handleGeoError(error, i);
+        }, {
+          enableHighAccuracy : false,
+          // don't wait longer than 5s
+          timeout : 5000,
+          maximumAge : 0
+        });
+      }
+    },
+
+    handleGeoError: function(error, i) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          // user denied permission: reset to default search
+          //document.location.href = baseUrl;
+          alert(Drupal.t('Permission for accessing position denied'));
+          break;
+
+        default:
+        case error.TIMEOUT:
+        case error.POSITION_UNAVAILABLE:
+          alert(Drupal.t('Current location is not available'));
+      }
+      // Allow other scripts to react when the current position was set.
+      $('#'  + i + '-preset').trigger('currentPositionError', [ error ] );
     }
   }
 
@@ -150,6 +186,18 @@
             });
         }
 
+        // Add preset for users current position.
+        if (typeof(settings.searchApiLocationPreset[i].add_current_position) != 'undefined' && settings.searchApiLocationPreset[i].add_current_position) {
+          if ('geolocation' in navigator) {
+            var selected = (settings.searchApiLocationPreset[i].preset == 'current') ? ' selected="selected"': '';
+            $("#" + i + "-preset").append('<option value="current" ' + selected + '>' + Drupal.t('Your position') + '</option>');
+            $("#" + i + "-preset").bind('change.searchApiLocationPreset', function() {
+              if ($(this).val() == 'current') {
+                Drupal.searchApiLocationPreset.setCurrentCoordinates(i);
+              }
+            });
+          }
+        }
 
         // Create maps.
         $("#"+ i +'-gmap').once('process', function(){
