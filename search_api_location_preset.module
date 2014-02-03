@@ -1,0 +1,86 @@
+<?php
+/**
+ * @file
+ * Provides location based search functionality to the Search API.
+ */
+
+/**
+ * Implements hook_views_api().
+ */
+function search_api_location_preset_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'search_api_location_preset') . '/views',
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function search_api_location_preset_theme() {
+  return array(
+    // Table for the exposed form filter settings.
+    'search_api_location_preset_views_filter_table' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Returns the available radius units.
+ *
+ * Caches the results language aware.
+ * Invokes an alter hook.
+ *
+ * @return array
+ *   List with distance measurement units.
+ *   Key is the factor to convert the unit to kilometer, value is the label.
+ *   A mile is 1.60935 km, a metre is 0.001 km.
+ */
+function search_api_location_preset_radius_options() {
+  global $language_content;
+  $options = drupal_static(__FUNCTION__);
+  if ($cache = cache_get(__FUNCTION__)) {
+    $options = $cache->data;
+  }
+  if (empty($options[$language_content->language])) {
+    $options[$language_content->language] = array(
+      '0.001' => t('meter'),
+      '1' => t('kilometer'),
+      '1.60935' => t('mile'),
+    );
+    drupal_alter('search_api_location_preset_radius_options', $options);
+    cache_set(__FUNCTION__, $options, 'cache', CACHE_TEMPORARY);
+  }
+  return $options[$language_content->language];
+}
+
+/**
+ * Theme exposed form settings table.
+ */
+function theme_search_api_location_preset_views_filter_table($variables) {
+  $form = &$variables['form'];
+  $rows = array();
+  $radius_units = search_api_location_preset_radius_options();
+  foreach (element_children($form) as $weight) {
+    $location = $form[$weight]['#value'];
+    $row['name'] = $location['label'];
+    $row['lat'] = $location['lat'];
+    $row['long'] = $location['long'];
+    $row['radius'] = $location['radius'] . ' ' . $radius_units[$location['radius_unit']] . ' (' . t('min') . ': ' . $location['radius_min'] . ' / ' . t('max') . ': ' . $location['radius_max'] . ')';
+    $row['weight'] = render($form[$weight]['list_item']['weight']);
+    $row['action'] = render($form[$weight]['list_item']);
+    $rows[] = array(
+      'data' => $row,
+      'class' => array('draggable'),
+    );
+  }
+  $header = array(t('Label'), t('Lat'), t('Long'), t('Radius'), t('Weight'), '');
+  drupal_add_tabledrag('search-api-spatial-exposed-locations', 'order', 'sibling', 'weight');
+  $output = theme('table', array(
+    'rows' => $rows,
+    'header' => $header,
+    'attributes' => array('id' => 'search-api-spatial-exposed-locations', 'class' => array('arrange')),
+  ));
+  return $output;
+}
