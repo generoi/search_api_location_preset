@@ -49,8 +49,8 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
 
     // Define exposed options.
     $options['expose']['contains'] += array(
-      'allow_custom_values' => array('default' => TRUE),
-      'add_current_position_preset' => array('default' => TRUE),
+      'allow_custom_values' => array('default' => FALSE),
+      'add_current_position_preset' => array('default' => FALSE),
       'geocoder' => array(
         'contains' => array(
           'show' => array('default' => FALSE),
@@ -81,7 +81,6 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
           ),
         ),
       ),
-      'enable_filter_by_default' => array('default' => FALSE),
       'use_operator' => array('default' => FALSE),
       'description' => array('default' => NULL),
       'remember' => array('default' => FALSE),
@@ -174,7 +173,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       foreach ($this->options['expose']['locations'] as $preset_item) {
         $presets[] = t($preset_item['label']);
       }
-      if ($preset_index == self::FILTER_CUSTOM || (!empty($this->options['expose']['allow_custom_values']) && (!empty($this->options['expose']['geocoder']['show']) || !empty($this->options['expose']['map']['settings']['allow_pick'])))) {
+      if ($preset_index === self::FILTER_CUSTOM || (!empty($this->options['expose']['allow_custom_values']) && (!empty($this->options['expose']['geocoder']['show']) || !empty($this->options['expose']['map']['settings']['allow_pick'])))) {
         $presets[self::FILTER_CUSTOM] = t('Custom');
       }
       $form['value']['preset'] = array(
@@ -302,7 +301,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
   protected function getCurrentPreset($input) {
     // By default the first of the presets is used.
     $preset_index = self::FILTER_DISABLED;
-    if (!empty($this->options['expose']['enable_filter_by_default'])) {
+    if (!empty($this->options['expose']['required'])) {
       $preset_index = 0;
     }
     $preset = FALSE;
@@ -403,6 +402,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     $form['expose']['multiple']['#access'] = FALSE;
     $form['expose']['use_operator']['#access'] = FALSE;
     $form['expose']['operator_id']['#access'] = FALSE;
+    $form['expose']['required']['#description'] = t('Uses the first item in the preset list.');
 
     $form['expose']['allow_custom_values'] = array(
       '#type' => 'checkbox',
@@ -511,13 +511,6 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       '#type' => 'textfield',
       '#size' => 3,
       '#default_value' => $this->options['expose']['radius']['settings']['step'],
-    );
-
-    $form['expose']['enable_filter_by_default'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable the filter by default'),
-      '#description' => t('Uses the first item in the preset list.'),
-      '#default_value' => !empty($this->options['expose']['enable_filter_by_default']),
     );
 
     // If there are no locations yet - add default one.
