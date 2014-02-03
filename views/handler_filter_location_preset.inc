@@ -334,7 +334,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
 
     // Check if radius information were posted.
     if ($preset !== FALSE && !empty($input)) {
-      if (!empty($this->options['expose']['radius']['show'])) {
+      if (!empty($this->options['expose']['radius']['show']) || !empty($this->options['expose']['allow_custom_values'])) {
         if (isset($input['radius'])) {
           $preset['radius'] = (int) $input['radius'];
         }
