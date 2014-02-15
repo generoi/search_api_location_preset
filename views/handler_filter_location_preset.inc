@@ -250,14 +250,14 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     }
     $form['value']['lat'] = array(
       '#type' => 'hidden',
-      '#default_value' => $preset_location['lat'],
+      '#default_value' => (isset($preset_location['lat'])) ? $preset_location['lat'] : NULL,
       '#attributes' => array(
         'id' => $html_id . '-lat',
       ),
     );
     $form['value']['long'] = array(
       '#type' => 'hidden',
-      '#default_value' => $preset_location['long'],
+      '#default_value' => (isset($preset_location['long'])) ? $preset_location['long'] : NULL,
       '#attributes' => array(
         'id' => $html_id . '-long',
       ),
