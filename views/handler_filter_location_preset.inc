@@ -738,8 +738,8 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     if ($preset_location && isset($preset_location['lat']) && isset($preset_location['lat'])) {
       $location_options[] = array(
         'field' => $this->real_field,
-        'lat' => $preset_location['lat'],
-        'lon' => $preset_location['long'],
+        'lat' => (float) $preset_location['lat'],
+        'lon' => (float) $preset_location['long'],
       );
       // Convert the radius value to kilometres based on the chosen unit.
       if ($preset_location['radius'] > 0) {
