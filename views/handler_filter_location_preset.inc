@@ -164,6 +164,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     $preset = $this->getCurrentPreset($input);
     $preset_index = key($preset);
     $preset_location = reset($preset);
+    $preset_changed = (!empty($input['last_preset']) && $input['last_preset'] != $preset_index);
     if (!$preset_location) {
       $preset_location = array();
     }
@@ -185,11 +186,16 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
           'id' => $html_id . '-preset',
         ),
       );
-      // Ensure an empty radius gets the default.
-      if (empty($form_state['input'][$field]['location']['radius'])) {
+      $form['value']['last_preset'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $preset_index,
+        '#value' => $preset_index,
+      );
+      // Ensure an empty radius or a changed preset gets the default.
+      if (empty($form_state['input'][$identifier]['radius']) || $preset_changed) {
         unset(
-        $form_state['input'][$field]['location']['radius'],
-        $form_state['values'][$field]['location']['radius']
+        $form_state['input'][$identifier]['radius'],
+        $form_state['values'][$identifier]['radius']
         );
       }
     }
@@ -226,27 +232,31 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       '#type' => 'hidden',
       '#default_value' => $this->options['expose']['radius']['settings']['radius'],
     );
-    if ($preset_index !== self::FILTER_DISABLED && !empty($this->options['expose']['radius']['show']) && !empty($preset_location['radius']) && $preset_location['radius_min'] != $preset_location['radius_max']) {
-      $radius_units = search_api_location_preset_radius_options();
-      $form['value']['radius'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Radius'),
-        '#size' => 3,
-        '#default_value' => $preset_location['radius'],
-        '#field_suffix' => $radius_units[$preset_location['radius_unit']],
-        '#attributes' => array(
-          'id' => $html_id . '-radius',
-        ),
-      );
-      $form['value']['slider'] = array(
-        '#type' => 'container',
-        '#attributes' => array(
-          'id' => $html_id . '-slider',
-        ),
-        '#attached' => array(
-          'library' => array(array('system', 'ui.slider')),
-        ),
-      );
+    if ($preset_index !== self::FILTER_DISABLED) {
+      // Set the preset specific default radius.
+      $form['value']['radius']['#default_value'] = $preset_location['radius'];
+      if (!empty($this->options['expose']['radius']['show']) && !empty($preset_location['radius']) && $preset_location['radius_min'] != $preset_location['radius_max']) {
+        $radius_units = search_api_location_preset_radius_options();
+        $form['value']['radius'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Radius'),
+          '#size' => 3,
+          '#default_value' => $preset_location['radius'],
+          '#field_suffix' => $radius_units[$preset_location['radius_unit']],
+          '#attributes' => array(
+            'id' => $html_id . '-radius',
+          ),
+        );
+        $form['value']['slider'] = array(
+          '#type' => 'container',
+          '#attributes' => array(
+            'id' => $html_id . '-slider',
+          ),
+          '#attached' => array(
+            'library' => array(array('system', 'ui.slider')),
+          ),
+        );
+      }
     }
     $form['value']['lat'] = array(
       '#type' => 'hidden',
@@ -350,8 +360,12 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       $preset = $this->options['expose']['locations'][$preset_index];
     }
 
-    // Check if radius information were posted.
-    if ($preset !== FALSE && !empty($input)) {
+    $preset_changed = (!empty($input['last_preset']) && $input['last_preset'] != $preset_index);
+
+    // Check if radius information were posted. But only allow changes if the
+    // preset wasn't changed on this request. This ensures that the preset
+    // defaults get properly set initially.
+    if ($preset !== FALSE && !empty($input) && !$preset_changed) {
       if (!empty($this->options['expose']['radius']['show']) || !empty($this->options['expose']['allow_custom_values'])) {
         if (isset($input['radius'])) {
           $preset['radius'] = (int) $input['radius'];
