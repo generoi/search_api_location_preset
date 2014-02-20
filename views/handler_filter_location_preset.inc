@@ -260,14 +260,14 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     }
     $form['value']['lat'] = array(
       '#type' => 'hidden',
-      '#default_value' => $preset_location['lat'],
+      '#default_value' => (isset($preset_location['lat'])) ? $preset_location['lat'] : NULL,
       '#attributes' => array(
         'id' => $html_id . '-lat',
       ),
     );
     $form['value']['long'] = array(
       '#type' => 'hidden',
-      '#default_value' => $preset_location['long'],
+      '#default_value' => (isset($preset_location['long'])) ? $preset_location['long'] : NULL,
       '#attributes' => array(
         'id' => $html_id . '-long',
       ),
@@ -752,8 +752,8 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     if ($preset_location && isset($preset_location['lat']) && isset($preset_location['lat'])) {
       $location_options[] = array(
         'field' => $this->real_field,
-        'lat' => $preset_location['lat'],
-        'lon' => $preset_location['long'],
+        'lat' => (float) $preset_location['lat'],
+        'lon' => (float) $preset_location['long'],
       );
       // Convert the radius value to kilometres based on the chosen unit.
       if ($preset_location['radius'] > 0) {
