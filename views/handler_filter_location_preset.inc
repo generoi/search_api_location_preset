@@ -360,7 +360,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       $preset = $this->options['expose']['locations'][$preset_index];
     }
 
-    $preset_changed = (!empty($input['last_preset']) && $input['last_preset'] != $preset_index);
+    $preset_changed = (!empty($input['last_preset']) && $input['last_preset'] != $preset_index && $preset_index != self::FILTER_CUSTOM);
 
     // Check if radius information were posted. But only allow changes if the
     // preset wasn't changed on this request. This ensures that the preset
