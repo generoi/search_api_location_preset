@@ -49,6 +49,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
 
     // Define exposed options.
     $options['expose']['contains'] += array(
+      'hide_results_without_location' => array('default' => TRUE),
       'allow_custom_values' => array('default' => FALSE),
       'add_current_position_preset' => array('default' => FALSE),
       'geocoder' => array(
@@ -418,6 +419,13 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
     $form['expose']['operator_id']['#access'] = FALSE;
     $form['expose']['required']['#description'] = t('Uses the first item in the preset list.');
 
+
+    $form['expose']['hide_results_without_location'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Hide results without a location'),
+      '#description' => t('Results are only hidden if a preset / custom values are in effect. Needs this solr patch to work: https://drupal.org/node/2216895'),
+      '#default_value' => !empty($this->options['expose']['hide_results_without_location']),
+    );
     $form['expose']['allow_custom_values'] = array(
       '#type' => 'checkbox',
       '#title' => t('Allow custom values'),
@@ -742,7 +750,7 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
   /**
    * Add this filter to the query.
    */
-  public function query() {
+  public function query($group_by = FALSE) {
     $field = $this->options['expose']['identifier'];
     $preset_location = FALSE;
     if (isset($this->view->exposed_input[$field])) {
@@ -761,6 +769,11 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
         $search_api_location[$this->real_field]['radius'] = $preset_location['radius'] * (float) $preset_location['radius_unit'];
       }
       $this->query->setOption('search_api_location', $search_api_location);
+
+      // Hide results with no location.
+      if (!empty($this->options['expose']['hide_results_without_location'])) {
+        $this->query->condition($this->real_field, NULL, '<>', $group_by);
+      }
     }
   }
 
