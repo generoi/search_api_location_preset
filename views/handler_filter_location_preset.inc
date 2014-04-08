@@ -57,6 +57,12 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
           'show' => array('default' => FALSE),
         ),
       ),
+      'places_autocomplete' => array(
+        'contains' => array(
+          'show' => array('default' => FALSE),
+          'country' => array('default' => NULL),
+        ),
+      ),
       'map' => array(
         'contains' => array(
           'show' => array('default' => FALSE),
@@ -208,13 +214,22 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
         '#attributes' => array(
           'id' => $html_id . '-address',
         ),
-        '#field_suffix' => '<a id="geocode">' . t('Get location') . '</a>',
+        '#field_suffix' => '<a id="' . $html_id . '-geocode">' . t('Get location') . '</a>',
       );
       $form['help'] = array(
         '#attributes' => array(
           'id' => $html_id . '-help',
         ),
         '#markup' => t('Enter an address / location in the textfield or click on the map to set the marker'),
+      );
+    }
+    if (!empty($this->options['expose']['places_autocomplete']['show'])) {
+      $form['places-address'] = array(
+        '#type' => 'textfield',
+        '#maxlength' => 120,
+        '#attributes' => array(
+          'id' => $html_id . '-places-address',
+        ),
       );
     }
 
@@ -266,6 +281,17 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
         'id' => $html_id . '-lat',
       ),
     );
+
+    $places_options = array();
+    $libraries = array();
+    if (!empty($this->options['expose']['places_autocomplete']['show'])) {
+      $libraries[] = 'places';
+      if (!empty($this->options['expose']['places_autocomplete']['country'])) {
+        $places_options['componentRestrictions']['country'] = $this->options['expose']['places_autocomplete']['country'];
+      }
+    }
+    $gmap_js_lib = 'http://maps.googleapis.com/maps/api/js?libraries=' . implode(',', $libraries) . '&sensor=true';
+
     $form['value']['long'] = array(
       '#type' => 'hidden',
       '#default_value' => (isset($preset_location['long'])) ? $preset_location['long'] : NULL,
@@ -274,6 +300,10 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
       ),
       '#attached' => array(
         'js' => array(
+          $gmap_js_lib => array(
+            'type' => 'external',
+            'scope' => 'footer',
+          ),
           drupal_get_path('module', 'search_api_location_preset') . '/search_api_location_preset.pick.js' => array(
             'type' => 'file',
             'scope' => 'footer',
@@ -281,7 +311,11 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
           0 => array(
             'data' => array(
               'searchApiLocationPreset' => array(
-                $html_id => $preset_location + array('add_current_position' => !empty($this->options['expose']['add_current_position_preset']), 'preset' => $preset_index),
+                $html_id => $preset_location + array(
+                  'add_current_position' => !empty($this->options['expose']['add_current_position_preset']),
+                  'preset' => $preset_index,
+                  'placesOptions' => $places_options,
+                ),
               ),
             ),
             'type' => 'setting',
@@ -453,6 +487,29 @@ class SearchApiLocationPresetViewsHandlerFilter extends SearchApiViewsHandlerFil
         ),
       ),
     );
+    $form['expose']['places_autocomplete']['show'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show Google Places autocomplete input field'),
+      '#default_value' => !empty($this->options['expose']['places_autocomplete']['show']),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="options[expose][allow_custom_values]"]' => array('checked' => TRUE),
+        ),
+      ),
+    );
+    $form['expose']['places_autocomplete']['country'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Restrict results to country'),
+      '#maxlength' => 2,
+      '#default_value' => !empty($this->options['expose']['places_autocomplete']['countries']),
+      '#description' => t('The country must be passed as as a two-character, ISO 3166-1 Alpha-2 compatible country code.'),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="options[expose][places_autocomplete][show]"]' => array('checked' => TRUE),
+        ),
+      ),
+    );
+
     $form['expose']['map']['show'] = array(
       '#type' => 'checkbox',
       '#title' => t('Show map'),

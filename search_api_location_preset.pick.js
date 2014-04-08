@@ -59,7 +59,10 @@
 
       geocoder.geocode( { 'address': address }, function(results, status) {
         if (status == google.maps.GeocoderStatus.OK) {
-          Drupal.searchApiLocationPreset.maps[i].setCenter(results[0].geometry.location);
+          var map = Drupal.searchApiLocationPreset.maps[i];
+          if (map) {
+            Drupal.searchApiLocationPreset.maps[i].setCenter(results[0].geometry.location);
+          }
           Drupal.searchApiLocationPreset.setMapMarker(results[0].geometry.location, i);
           Drupal.searchApiLocationPreset.codeLatLong(results[0].geometry.location, i, 'textinput');
         } else {
@@ -199,7 +202,31 @@
           }
         }
 
-        // Create maps.
+        $("#" + i + "-geocode").click(function(e) {
+          Drupal.searchApiLocationPreset.codeAddress(i);
+        });
+        $("#" + i + "-address").keypress(function(ev){
+          // trigger on enter key
+          if (ev.which == 13) {
+            ev.preventDefault();
+            Drupal.searchApiLocationPreset.codeAddress(i);
+          }
+        });
+        $("#" + i + "-places-address").once('process', function() {
+          var options = $.extend({
+            types: ['geocode'],
+          }, searchApiLocationPreset.placesOptions || {});
+
+          var autocomplete = new google.maps.places.Autocomplete(this, options);
+          google.maps.event.addListener(autocomplete, 'place_changed', function() {
+            var place = autocomplete.getPlace();
+            if (typeof place.geometry != 'undefined') {
+              Drupal.searchApiLocationPreset.codeLatLong(place.geometry.location, i, 'textinput');
+            }
+          });
+        });
+
+        // Create maps for selecting a location.
         $("#"+ i +'-gmap').once('process', function(){
           lat = parseFloat(searchApiLocationPreset.lat);
           long = parseFloat(searchApiLocationPreset.long);
@@ -219,18 +246,6 @@
             Drupal.searchApiLocationPreset.setMapMarker(LatLng, i);
             Drupal.searchApiLocationPreset.codeLatLong(LatLng, i, 'geocoder');
           }
-
-          $("#" + i + "-geocode").click(function(e) {
-            Drupal.searchApiLocationPreset.codeAddress(i);
-          });
-
-          // trigger on enter key
-          $("#" + i + "-address").keypress(function(ev){
-            if(ev.which == 13){
-              ev.preventDefault();
-              Drupal.searchApiLocationPreset.codeAddress(i);
-            }
-          });
 
           // Listener to click
           google.maps.event.addListener(Drupal.searchApiLocationPreset.maps[i], 'click', function(me){
